@@ -133,6 +133,7 @@ let dragStartScroll=0;
 let isDragging=false;
 
 function escapeHtml(value){return String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));}
+function setImageWithFallback(image,src,onMissing){const dot=src.lastIndexOf('.');const stem=dot>=0?src.slice(0,dot):src;const ext=dot>=0?src.slice(dot+1):'';const candidates=[src,`${stem}.${ext.toLowerCase()}`,`${stem}.${ext.toUpperCase()}`,`${stem.toLowerCase()}.${ext.toLowerCase()}`,`${stem.toLowerCase()}.${ext.toUpperCase()}`,`${stem.toUpperCase()}.${ext.toLowerCase()}`,`${stem.toUpperCase()}.${ext.toUpperCase()}`];const unique=[...new Set(candidates)];let index=0;image.onerror=()=>{index++;if(index<unique.length){image.src=unique[index];}else if(onMissing){onMissing();}};image.src=unique[0];}
 function renderFilters(){
   filterChips.innerHTML='';
   portfolioData.filters.forEach(filter=>{
@@ -148,7 +149,7 @@ function renderProjects(){
     const coverImages=project.images&&project.images.length?project.images.slice(0,3):[project.thumbnail].filter(Boolean);
     const imageMarkup=coverImages.map((src,index)=>`<img src="${escapeHtml(src)}" alt="${escapeHtml(project.title)} preview ${index+1}" loading="lazy">`).join('');
     button.innerHTML=`<div class="project-image">${imageMarkup}</div><div class="project-name">${escapeHtml(project.title)}</div><div class="project-meta"><span>${escapeHtml(project.category)}</span><span>view work ↗</span></div>`;
-    button.querySelectorAll('img').forEach(image=>image.addEventListener('error',()=>image.remove()));
+    button.querySelectorAll('img').forEach(image=>setImageWithFallback(image,image.getAttribute('src'),()=>image.remove()));
     button.addEventListener('click',()=>openProject(project.title,project.label,project.description,project.images));projectsGrid.appendChild(button);
   });
 }
@@ -159,7 +160,7 @@ function renderExperience(){
     const previewImages=item.images&&item.images.length?item.images.slice(0,3):[];
     const preview=previewImages.length?`<div class="exp-thumb">${previewImages.map((src,index)=>`<img src="${escapeHtml(src)}" alt="${escapeHtml(item.organization)} design preview ${index+1}" loading="lazy">`).join('')}</div>`:`<div class="exp-thumb"><span>${escapeHtml(item.organization)}</span></div>`;
     row.innerHTML=`${preview}<div class="exp-card-bottom"><div class="exp-info"><h3>${escapeHtml(item.organization)}</h3><div class="exp-role">${escapeHtml(item.role)}</div><div class="exp-desc">${escapeHtml(item.details)}</div></div><button class="view-work" type="button">view work ↗</button></div>`;
-    row.querySelectorAll('.exp-thumb img').forEach(image=>image.addEventListener('error',()=>image.remove()));
+    row.querySelectorAll('.exp-thumb img').forEach(image=>setImageWithFallback(image,image.getAttribute('src'),()=>image.remove()));
     row.querySelector('button').addEventListener('click',()=>openProject(item.organization,item.role+' · '+item.details,item.description,item.images));experienceList.appendChild(row);
   });
 }
@@ -191,8 +192,8 @@ function openProject(title,label,description,images=[]){
   if(currentImages.length){
     currentImages.forEach((src,index)=>{
       const slide=document.createElement('div');slide.className='gallery-slide';slide.dataset.index=index;
-      const img=document.createElement('img');img.src=src;img.alt=title+' image '+(index+1);img.loading='lazy';
-      img.addEventListener('error',()=>{
+      const img=document.createElement('img');img.alt=title+' image '+(index+1);img.loading='lazy';
+      setImageWithFallback(img,src,()=>{
         slide.remove();
         currentImages=currentImages.filter(image=>image!==src);
         gallery.querySelectorAll('.gallery-slide').forEach((item,i)=>item.dataset.index=i);
